@@ -1,8 +1,8 @@
 ```json
 {
-  "date":"2022.01.11 21:37"
-  "tags": ["随记","测试"]
-	"author": "XinceChan"
+  "date":"2022.01.11 21:37",
+  "tags": ["随记","测试"],
+	"author": "XinceChan",
 }
 ```
 
