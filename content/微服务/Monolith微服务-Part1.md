@@ -17,22 +17,71 @@
 
 ### MONOLITH TO MICROSERVICE
 
-**系统架构**
+#### 系统架构
 
 ![archi](../../assets/images/monolith-archi.png)
 
-**微服务架构**
+#### 微服务架构
 
 ![image-20230115212557982](../../assets/images/archi.png)
 
-**对应端口**
+#### 对应端口
 
 ![image-20230115213513436](../../assets/images/ports.png)
 
-```mermaid
-graph TD;
-	A-->B;
-	A-->C;
-	B-->D;
+#### 文件架构
+
+```json
+├── cmd
+│   ├── microservices
+│   │   ├── orders
+│   │   │   └── main.go
+│   │   ├── payments
+│   │   │   └── main.go
+│   │   └── shop
+│   │       └── main.go
+│   └── monolith
+│       └── main.go
+├── docker
+├── pkg
+│   ├── common
+│   │   ├── cmd
+│   │   │   ├── router.go
+│   │   │   ├── signals.go
+│   │   │   └── wait.go
+│   │   ├── http
+│   │   │   └── error.go
+│   │   └── price
+│   │       ├── price.go
+│   │       └── price_test.go
+│   ├── orders
+│   │   ├── application
+│   │   │   └── orders.go
+│   │   ├── domain
+│   │   │   └── orders
+│   │   │       ├── address.go
+│   │   │       ├── address_test.go
+│   │   │       ├── order.go
+│   │   │       ├── order_test.go
+│   │   │       ├── product.go
+│   │   │       └── respository.go
+│   │   ├── infrastructure
+│   │   └── interfaces
+│   ├── payments
+│   │   ├── application
+│   │   ├── infrastructure
+│   │   └── interfaces
+│   └── shop
+│       ├── application
+│       ├── domain
+│       ├── fixtures.go
+│       ├── infrastructure
+│       └── interfaces
+├── tests
+│   └── acceptance_test.go
+├── Dockerfile
+├── Makefile
+├── docker-compose.yml
+├── go.work
 ```
 
