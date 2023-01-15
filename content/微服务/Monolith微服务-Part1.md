@@ -15,5 +15,5 @@
 
 **系统架构**
 
-<img src="../../assets/images/image-20230115182338726.png" alt="image-20230115182338726" style="zoom:50%;" />
+<img src="../../images/image-20230115182338726.png" alt="image-20230115182338726" style="zoom:50%;" />
 
