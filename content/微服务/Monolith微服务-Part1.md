@@ -15,6 +15,6 @@
 
 **系统架构**
 
-<img src="../../assets/images/1234.png" alt="archi" style="zoom:50%;" />
+![archi](../../assets/images/1234.png)
 
 微服务架构
