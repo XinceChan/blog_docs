@@ -15,6 +15,6 @@
 
 **系统架构**
 
-![archi](./images/1234.png)
+![archi](../../assets/images/1234.png)
 
 微服务架构
