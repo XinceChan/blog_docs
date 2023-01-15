@@ -15,5 +15,5 @@
 
 **系统架构**
 
-![archi](images/image-20230115182338726.png)
+![archi](./images/image-20230115182338726.png)
 
