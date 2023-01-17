@@ -51,7 +51,7 @@ func TestHelloTom(t *testing.T) {
 }
 ```
 
-可以通过引入==github.com/stretchr/testify/assert==来简化测试，也有很多开源的assert包
+可以通过引入 github.com/stretchr/testify/assert 来简化测试，也有很多开源的assert包
 
 ```go
 func HelloTom() string {
@@ -177,4 +177,4 @@ func BenchmarkSelectParallel(b *testing.B) {
 
 可以尝试 https://github.com/bytedance/gopkg
 
-==fastrand== 在应对高并发的情况下，可能效果更好。
+fastrand 在应对高并发的情况下，可能效果更好。
