@@ -19,6 +19,6 @@
 2. 暂不考虑前端页面实现，仅仅实现一个本地web服务
 3. 话题和回帖数据用文件存储
 
-![image-20230117164633529](../../assets/images/ER.png)
+![image-20230117171049423](../../assets/images/ER.png)
 
 ![image-20230117170652711](../../assets/images/structure.png)
