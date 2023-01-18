@@ -48,9 +48,46 @@ Showing nodes accounting for 3320ms, 100% of 3320ms total
          0     0%   100%     3320ms   100%  runtime.main
 ```
 
-其他类似
+#### 排查 CPU 问题
 
-```go
-go tool pprof -http=:8080 "http://localhost:6060/debug/pprof/mutex"
-```
+- 命令行分析
 
+  - ```go
+    go tool pprof "http://localhost:6060/debug/pprof/profile?seconds=10"
+    ```
+
+- top 命令
+
+- list 命令
+
+- 熟悉 web 页面分析
+
+- 调用关系图，火焰图
+
+- ```go
+  go tool pprof -http=:8080 "http://localhost:6060/debug/pprof/cpu"
+  ```
+
+#### 排查堆内存问题
+
+- ```go
+  go tool pprof -http=:8080 "http://localhost:6060/debug/pprof/heap]"
+  ```
+
+#### 排查协程问题
+
+- ```go
+  go tool pprof -http=:8080 "http://localhost:6060/debug/pprof/goroutine"
+  ```
+
+#### 排查锁问题
+
+- ```go
+  go tool pprof -http=:8080 "http://localhost:6060/debug/pprof/mutex"
+  ```
+
+#### 排查阻塞问题
+
+- ```go
+  go tool pprof -http=:8080 "http://localhost:6060/debug/pprof/block"
+  ```
