@@ -82,6 +82,6 @@
 ├── Dockerfile
 ├── Makefile
 ├── docker-compose.yml
-├── go.work
+└── go.work
 ```
 
