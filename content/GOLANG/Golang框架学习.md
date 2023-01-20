@@ -415,3 +415,397 @@ db, err := gorm.Open(mysql.Open("root:1838830210@tcp(127.0.0.1:3306)/gorm?charse
 
 相关文档： [Gorm Performance](https://gorm.cn/zh_CN/docs/performance.html)
 
+---
+
+## Kitex
+
+IDL: **接口描述语言**（Interface description language，缩写**IDL**），是用来描述[软件组件](https://zh.m.wikipedia.org/wiki/软件组件)[介面](https://zh.m.wikipedia.org/wiki/介面_(程式設計))的一种[计算机语言](https://zh.m.wikipedia.org/wiki/计算机语言)。IDL通过一种独立于编程语言的方式来描述接口，使得在不同平台上运行的对象和用不同语言编写的程序可以相互通信交流；比如，一个组件用[C++](https://zh.m.wikipedia.org/wiki/C%2B%2B)写成，另一个组件用[Java](https://zh.m.wikipedia.org/wiki/Java)写成。
+
+IDL通常用于[远程调用](https://zh.m.wikipedia.org/wiki/遠程調用)软件。在这种情况下，一般是由远程客户终端调用不同操作系统上的对象组件，并且这些对象组件可能是由不同计算机语言编写的。IDL建立起了两个不同操作系统间通信的桥梁。
+
+- Thrift IDL语法 https://thrift.apache.org/docs/idl
+
+- proto3 语法: https://protobuf.dev/
+
+### 定义IDL
+
+使用 IDL 定义服务与接口
+
+如果我们需要进行 RPC，就需要知道对方的接口是什么，同时也需要知道返回值是什么样的。这时候，就需要 IDL 来约定双方的协议，就像在写代码的时候需要调用某个函数，我们需要知道函数签名一样。
+
+```idl
+namespace go api
+
+struct Request {
+	1: string message
+}
+
+struct Response {
+	1: string message
+}
+
+service Echo {
+	Response echo(1: Request req)
+}
+```
+
+```go
+kitex -module example -service example echo.thrift
+```
+
+- build.sh:构建脚本
+- kitex_gen:IDL内容相关的生成代码，主要是基础的 Service/Client 代码。
+- main.go:程序主入口
+- handler.go:用户在该文件里实现 IDL Service 定义的方法
+
+```go
+.
+├── build.sh
+├── echo.thrift
+├── go.mod
+├── handler.go
+├── kitex.yaml
+├── kitex_gen
+│   └── api
+│       ├── echo
+│       │   ├── client.go
+│       │   ├── echo.go
+│       │   ├── invoker.go
+│       │   └── server.go
+│       ├── echo.go
+│       ├── k-consts.go
+│       └── k-echo.go
+├── main.go
+└── script
+    └── bootstrap.sh
+```
+
+如果遇到类似如下报错：
+
+```
+github.com/apache/thrift/lib/go/thrift: ambiguous import: found package github.com/apache/thrift/lib/go/thrift in multiple modules
+```
+
+先执行一遍下述命令，再继续操作：
+
+```go
+go mod edit -droprequire=github.com/apache/thrift/lib/go/thrift
+go mod edit -replace=github.com/apache/thrift=github.com/apache/thrift@v0.13.0
+```
+
+这是遇到的错误，查看文档成功解决了错误。https://www.cloudwego.io/zh/docs/kitex/getting-started/
+
+### Kitex Client 发起请求
+
+#### 创建请求
+
+```go
+import (
+    "example/kitex_gen/api/echo"
+    "github.com/cloudweg/kitex/client"
+)
+...
+c, err := echo.NewClient("example", client.WithHostPorts("0.0.0.0:8888"))
+if err != nil {
+    log.Fatal(err)
+}
+```
+
+#### 发起请求
+
+```go
+import "example/kitex_gen/api"
+...
+req := &api.Request{Message: "my request"}
+resp, err := c.Echo(context.Background(), req, callopt.WithRPCTimeout(3*time.Second))
+if err != nil {
+    log.Fatal(err)
+}
+log.Println(resp)
+```
+
+### Kitex 服务注册与发现
+
+github地址： https://github.com/kitex-contrib/registry-etcd/tree/main
+
+```go
+type HelloImpl struct{}
+
+func (h *HelloImpl) Echo(ctx context.Context, req *api.Request) (resp *api.Response, err error) {
+	resp = &api.Response{
+		Message: req.Message,
+	}
+	return
+}
+
+func main() {
+	r, err := etcd.NewEtcdRegistry([]string{"127.0.0.1:2379"})
+	if err != nil {
+		log.Fatal(err)
+	}
+	server := hello.NewServer(new(HelloImpl), server.WithRegistry(r), server.WithServerBasicInfo(&rpcinfo.EndpointBasicInfo{
+		ServiceName: "Hello",
+	}))
+	err = server.Run()
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
+```go
+func main() {
+	r, err := etcd.NewEtcdResolver([]string{"127.0.0.1:2379"})
+	if err != nil {
+		log.Fatal(err)
+	}
+	client := hello.MustNewClient("Hello", client.WithResolver(r))
+	for {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+		resp, err := client.Echo(ctx, &api.Request{Message: "Hello"})
+		cancel()
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Println(resp)
+		time.Sleep(time.Second)
+	}
+}
+```
+
+## Hertz
+
+更多实例: [hertz-examples](https://github.com/cloudwego/hertz-examples)
+
+```go
+import (
+	"context"
+
+	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/app/server"
+	"github.com/cloudwego/hertz/pkg/common/utils"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
+)
+
+func main() {
+	h := server.Default(server.WithHostPorts("127.0.0.1:8080"))
+
+	h.GET("/ping", func(c context.Context, ctx *app.RequestContext) {
+		ctx.JSON(consts.StatusOK, utils.H{"message": "pong"})
+	})
+
+	h.Spin()
+}
+```
+
+分为两个上下文 `c context.Context`专注于传递源信息  `ctx *app.RequestContext`专注于请求处理
+
+### Hertz 路由
+
+Hertz 提供了 `GET`、`POST`、`PUT`、`DELETE`、` ANY` 等方法用于注册路由
+
+```go
+func RegisterRoute(h *server.Hertz) {
+	h.GET("/get", func(ctx context.Context, c *app.RequestContext) {
+		c.String(consts.StatusOK, "get")
+	})
+	h.POST("/post", func(ctx context.Context, c *app.RequestContext) {
+		c.String(consts.StatusOK, "post")
+	})
+	h.PUT("/put", func(ctx context.Context, c *app.RequestContext) {
+		c.String(consts.StatusOK, "put")
+	})
+	h.DELETE("/delete", func(ctx context.Context, c *app.RequestContext) {
+		c.String(consts.StatusOK, "delete")
+	})
+	h.PATCH("/patch", func(ctx context.Context, c *app.RequestContext) {
+		c.String(consts.StatusOK, "patch")
+	})
+	h.HEAD("/head", func(ctx context.Context, c *app.RequestContext) {
+		c.String(consts.StatusOK, "head")
+	})
+	h.OPTIONS("/options", func(ctx context.Context, c *app.RequestContext) {
+		c.String(consts.StatusOK, "options")
+	})
+}
+```
+
+Hertz 提供了路由组（Group）的能力，用于支持路由分组的功能
+
+```go
+// Simple group: v1
+v1 := h.Group("/v1")
+{
+	// loginEndpoint is a handler func
+	v1.POST("/login", loginEndpoint)
+	v1.POST("/submit", submitEndpoint)
+	v1.POST("/streaming_read", readEndpoint)
+}
+// Simple group: v2
+{
+	v2.POST("/login", loginEndpoint)
+	v2.POST("/submit", submitEndpoint)
+	v2.POST("/streaming_read", readEndpoint)
+}
+```
+
+Hertz 提供了参数路由和通配路由，路由的优先级为：静态路由 > 命名路由 > 通配路由
+
+```go
+// This handler will match: "/hertz/version", but will not match: "/hertz/" or "/hertz"
+h.GET("/hertz/:version", func(ctx context.Context, c *app.RequestContext) {
+	version := c.Param("version")
+	c.String(consts.StatusOK, "Hello %s", version)
+})
+// However, this one will match "/hertz/v1/" and "/hertz/v2/send"
+h.GET("/hertz/:version/*action", func(ctx context.Context, c *app.RequestContext) {
+	version := c.Param("version")
+	action := c.Param("action")
+	message := version + " is " + action
+	c.String(consts.StatusOK, message)
+})
+// For each matched request Context will hold the route definition
+h.POST("/hertz/:version/*action", func(ctx context.Context, c *app.RequestContext) {
+	// c.FullPath() == "/hertz/:version/*action" // true
+	c.String(consts.StatusOK, c.FullPath())
+})
+```
+
+### Hertz 参数绑定
+
+Hertz 提供了 `Bind`、`Validate`、`BindAndValidate` 函数用于进行参数绑定和校验
+
+```go
+type Args struct {
+	Query      string   `query:"query"`
+	QuerySlice []string `query:"q"`
+	Path       string   `path:"path"`
+	Header     string   `header:"header"`
+	Form       string   `form:"form"`
+	Json       string   `json:"json"`
+	Vd         int      `query:"vd" vd:"$==0||$==1"`
+}
+
+func main() {
+	h := server.Default(server.WithHostPorts("127.0.0.1:8080"))
+
+	h.POST("v:path/bind", func(ctx context.Context, c *app.RequestContext) {
+		var arg Args
+		err := c.BindAndValidate(&arg)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(arg)
+	})
+
+	h.Spin()
+}
+```
+
+### Hertz 中间件
+
+Hertz 的中间件主要分为客户端中间件和服务端中间件，如下展示一个服务端中间件。
+
+```go
+func MyMiddleware() app.HandlerFunc {
+	return func(ctx context.Context, c *app.RequestContext) {
+		// pre-handle
+		fmt.Println("pre-handle")
+		c.Next(ctx) // call the next middleware(handler)
+		// post-handle
+		fmt.Println("post-handle")
+	}
+}
+func main() {
+	h := server.Default(server.WithHostPorts("127.0.0.1:8080"))
+
+	h.Use(MyMiddleware())
+	h.GET("/middleware", func(ctx context.Context, c *app.RequestContext) {
+		c.String(consts.StatusOK, "Hello hertz!")
+	})
+
+	h.Spin()
+}
+```
+
+### Hertz Client
+
+Hertz 提供了 HTTP Client 用于帮助用户发送 HTTP 请求
+
+```go
+c, err := client.NewClient()
+if err != nil {
+	return
+}
+// send http get request
+status, body, _ := c.Get(context.Background(), nil, "http://www.example.com")
+fmt.Printf("status=%v body=%v\n", status, string(body))
+
+// send http post request
+var postArgs protocol.Args
+postArgs.Set("arg", "a") // Set post args
+status, body, _ = c.Post(context.Background(), nil, "http://www.example.com", &postArgs)
+fmt.Printf("status=%v body=%v\n", status, string(body))
+```
+
+### Hertz 代码生成工具
+
+Hertz 提供了代码生成工具 Hz，通过定义 IDL 文件即可生成对应的基础服务代码。
+
+```idl
+namespace go hello.example
+
+struct HelloReq {
+	1: string Name (api.query="name");
+}
+
+struct HelloResp {
+	1: string RespBody;
+}
+
+service HelloService {
+	HelloResp HelloMethod(1: HelloReq request) (api.get="/hello");
+}
+```
+
+```go
+.
+├── biz                                // business 层，存放业务逻辑相关流程
+│   ├── handler                        // 存放 handler 文件
+│   │   ├── hello                      // hello/example 对应 thrift idl 中定义的 namespace；而对于 protobuf idl，则是对应 go_package 的最后一级
+│   │   │   └── example
+│   │   │       ├── hello_service.go   // handler 文件，用户在该文件里实现 IDL service 定义的方法，update 时会查找 当前文件已有的 handler 在尾部追加新的 handler
+│   │   │       └── new_service.go     // 同上，idl 中定义的每一个 service 对应一个文件
+│   │   └── ping.go                    // 默认携带的 ping handler，用于生成代码快速调试，无其他特殊含义
+│   ├── model                          // IDL 内容相关的生成代码
+│   │   └── hello                      // hello/example 对应 thrift idl 中定义的 namespace；而对于 protobuf idl，则是对应 go_package
+│   │     └── example
+│   │         └── hello.go             // thriftgo 的产物，包含 hello.thrift 定义的内容的 go 代码，update 时会重新生成
+│   └── router                         // idl 中定义的路由相关生成代码
+│       ├── hello                      // hello/example 对应 thrift idl 中定义的namespace；而对于 protobuf idl，则是对应 go_package 的最后一级
+│       │   └── example
+│       │       ├── hello.go           // hz 为 hello.thrift 中定义的路由生成的路由注册代码；每次 update 相关 idl 会重新生成该文件
+│       │       └── middleware.go      // 默认中间件函数，hz 为每一个生成的路由组都默认加了一个中间件；update 时会查找当前文件已有的 middleware 在尾部追加新的 middleware
+│       └── register.go                // 调用注册每一个 idl 文件中的路由定义；当有新的 idl 加入，在更新的时候会自动插入其路由注册的调用；勿动
+├── go.mod                             // go.mod 文件，如不在命令行指定，则默认使用相对于GOPATH的相对路径作为 module 名
+├── idl                                // 用户定义的idl，位置可任意
+│   └── hello.thrift
+├── main.go                            // 程序入口
+├── router.go                          // 用户自定义除 idl 外的路由方法
+└── router_gen.go                      // hz 生成的路由注册代码，用于调用用户自定义的路由以及 hz 生成的路由
+```
+
+---
+
+## 实战案例介绍
+
+### 项目介绍
+
+笔记项目是一个使用 `Hertz`、`Kitex`、`Gorm` 搭建出来的具备一定业务逻辑的后端API项目。
+
+| 服务名称 |   服务介绍   | 传输协议 |    主要技术栈    |
+| :------: | :----------: | :------: | :--------------: |
+| demoapi  |   API服务    |   HTTP   | Gorm/Kitex/Hertz |
+| demouser | 用户数据管理 | Protobuf |    Gorm/Kitex    |
+| demonote | 笔记数据管理 |  Thrift  |    Gorm/Kitex    |
+
