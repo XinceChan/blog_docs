@@ -175,6 +175,6 @@ func BenchmarkSelectParallel(b *testing.B) {
 }
 ```
 
-可以尝试 https://github.com/bytedance/gopkg
+可以尝试 [fastrand](https://github.com/bytedance/gopkg)
 
 fastrand 在应对高并发的情况下，可能效果更好。
