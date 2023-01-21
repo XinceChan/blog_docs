@@ -806,6 +806,7 @@ service HelloService {
 | 服务名称 |   服务介绍   | 传输协议 |    主要技术栈    |
 | :------: | :----------: | :------: | :--------------: |
 | demoapi  |   API服务    |   HTTP   | Gorm/Kitex/Hertz |
-| demouser | 用户数据管理 | Protobuf |    Gorm/Kitex    |
+| demouser | 用户数据管理 |  Thrift  |    Gorm/Kitex    |
 | demonote | 笔记数据管理 |  Thrift  |    Gorm/Kitex    |
 
+![技术框架](../../assets/images/技术框架.png)
